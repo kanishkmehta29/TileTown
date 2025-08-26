@@ -1,0 +1,24 @@
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/kanishkmehta29/TileTown/handlers"
+	"github.com/kanishkmehta29/TileTown/services"
+)
+
+func main(){
+	roomManager := services.NewRoomManager()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/rooms",handlers.CreateRoomHandler(roomManager)).Methods("POST")
+	r.HandleFunc("/rooms/{code}/join",handlers.JoinRoomHandler(roomManager)).Methods("GET")
+
+	log.Println("Server running on :8080")
+	if err := http.ListenAndServe(":8080",r);err != nil{
+		log.Fatal(err)
+	}
+
+}
