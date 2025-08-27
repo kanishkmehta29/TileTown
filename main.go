@@ -14,7 +14,8 @@ func main(){
 
 	r := mux.NewRouter()
 	r.HandleFunc("/rooms",handlers.CreateRoomHandler(roomManager)).Methods("POST")
-	r.HandleFunc("/rooms/{code}/join",handlers.JoinRoomHandler(roomManager)).Methods("GET")
+	r.HandleFunc("/rooms/{code}/join/{name}",handlers.JoinRoomHandler(roomManager)).Methods("GET")
+	r.PathPrefix("/").Handler(handlers.StaticFileHandler())
 
 	log.Println("Server running on :8080")
 	if err := http.ListenAndServe(":8080",r);err != nil{
