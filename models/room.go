@@ -8,6 +8,7 @@ type Player struct {
 	Id           string
 	Name         string
 	X, Y         int
+	Direction    string
 	Conn         *websocket.Conn
 	MessageQueue chan *Message
 }
@@ -20,9 +21,11 @@ type Room struct {
 }
 
 type Message struct {
-	Type string `json:"type"`
-	Id   string `json:"id,omitempty"`
-	X    int    `json:"x,omitempty"`
-	Y    int    `json:"y,omitempty"`
-	Text string `json:"text,omitempty"`
+	Type      string `json:"type"`
+	Id        string `json:"id,omitempty"`
+	X         int    `json:"x,omitempty"`
+	Y         int    `json:"y,omitempty"`
+	Direction string `json:"direction,omitempty"`
+	Text      string `json:"text,omitempty"`
+	Name      string `json:"name,omitempty"`
 }

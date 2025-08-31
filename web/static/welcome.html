@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TileTown - Welcome</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="game-container">
+      <div id="info" style="display: none">
+        <p>🎮 Connecting to TileTown...</p>
+        <p style="font-size: 14px; opacity: 0.8; margin-top: 10px;">Please wait while we set up your game</p>
+      </div>
+
+      <div id="joinForm">
+        <h3>🏘️ Welcome to TileTown</h3>
+        
+        <!-- Option Selection -->
+        <div id="option-selection">
+          <div class="option-buttons">
+            <button type="button" id="createRoomBtn" class="option-btn active" onclick="selectOption('create')">
+              🏗️ Create New Room
+            </button>
+            <button type="button" id="joinRoomBtn" class="option-btn" onclick="selectOption('join')">
+              🚪 Join Existing Room
+            </button>
+          </div>
+        </div>
+
+        <!-- Create Room Form -->
+        <div id="createRoomForm" class="room-form active">
+          <h4>Create a New Room</h4>
+          <input type="text" id="createPlayerName" placeholder="Enter Your Name" />
+          <button onclick="createRoom()">🚀 Create & Join Room</button>
+          <p class="form-description">
+            A unique room code will be generated for your new virtual office
+          </p>
+        </div>
+
+        <!-- Join Room Form -->
+        <div id="joinRoomForm" class="room-form">
+          <h4>Join Existing Room</h4>
+          <input type="text" id="roomCode" placeholder="Enter Room Code" />
+          <input type="text" id="joinPlayerName" placeholder="Enter Your Name" />
+          <button onclick="joinExistingRoom()">🚀 Join Room</button>
+          <p class="form-description">
+            Enter the room code shared by your team
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Option selection functionality
+      window.selectOption = function(option) {
+        const createBtn = document.getElementById('createRoomBtn');
+        const joinBtn = document.getElementById('joinRoomBtn');
+        const createForm = document.getElementById('createRoomForm');
+        const joinForm = document.getElementById('joinRoomForm');
+
+        if (option === 'create') {
+          createBtn.classList.add('active');
+          joinBtn.classList.remove('active');
+          createForm.classList.add('active');
+          joinForm.classList.remove('active');
+        } else {
+          joinBtn.classList.add('active');
+          createBtn.classList.remove('active');
+          joinForm.classList.add('active');
+          createForm.classList.remove('active');
+        }
+      };
+
+      // Create new room function
+      window.createRoom = async function() {
+        const playerName = document.getElementById("createPlayerName").value.trim();
+
+        if (!playerName) {
+          alert("Please enter your name");
+          return;
+        }
+
+        try {
+          // Show loading state
+          document.getElementById("joinForm").style.display = "none";
+          document.getElementById("info").style.display = "block";
+          document.querySelector("#info p").textContent = "🏗️ Creating your room...";
+
+          // Call the API to create a new room
+          const response = await fetch('/rooms', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to create room: ${response.status}`);
+          }
+
+          const roomData = await response.json();
+          const roomCode = roomData.code;
+
+          if (!roomCode) {
+            throw new Error('No room code received from server');
+          }
+
+          // Redirect to game with room info
+          window.location.href = `game.html?room=${roomCode}&player=${encodeURIComponent(playerName)}&new=true`;
+          
+        } catch (error) {
+          console.error('Error creating room:', error);
+          alert('Failed to create room. Please try again.');
+          
+          // Show the form again
+          document.getElementById("info").style.display = "none";
+          document.getElementById("joinForm").style.display = "block";
+        }
+      };
+
+      // Join existing room function
+      window.joinExistingRoom = function() {
+        const roomCode = document.getElementById("roomCode").value.trim();
+        const playerName = document.getElementById("joinPlayerName").value.trim();
+
+        if (!roomCode || !playerName) {
+          alert("Please enter both room code and your name");
+          return;
+        }
+
+        // Redirect to game with room info
+        window.location.href = `game.html?room=${roomCode}&player=${encodeURIComponent(playerName)}&new=false`;
+      };
+    </script>
+  </body>
+</html>

@@ -1,5 +1,7 @@
 import { Start } from './scenes/Start.js';
 
+let game = null;
+
 const config = {
     type: Phaser.AUTO,
     title: 'TileTown',
@@ -15,7 +17,7 @@ const config = {
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 0 }, 
+            gravity: { y: 0 },
             debug: false
         }
     },
@@ -25,5 +27,13 @@ const config = {
     },
 }
 
-new Phaser.Game(config);
-            
+export function startGame(roomCode, playerName) {
+    const startScene = new Start(roomCode, playerName);
+    
+    const gameConfig = {
+        ...config,
+        scene: [startScene]
+    };
+    
+    game = new Phaser.Game(gameConfig);
+}

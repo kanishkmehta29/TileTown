@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TileTown - Game</title>
+    <link rel="stylesheet" href="game-styles.css" />
+  </head>
+  <body>
+    <div id="game-container">
+      <!-- Game status in top-right corner -->
+      <div id="game-status">
+        <div id="connection-status">Connecting...</div>
+        <div id="player-count">Players: 0</div>
+        <div id="room-info"></div>
+      </div>
+
+      <div id="loading-info">
+        <p>🎮 Loading TileTown...</p>
+        <p style="font-size: 14px; opacity: 0.8; margin-top: 10px;">Please wait while we set up your game</p>
+      </div>
+    </div>
+
+    <script src="./phaser.js"></script>
+    <script type="module" src="./src/main.js"></script>
+    <script>
+      // Get room and player info from URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomCode = urlParams.get('room');
+      const playerName = urlParams.get('player');
+      const isNewRoom = urlParams.get('new') === 'true';
+
+      // Redirect to welcome page if no room info
+      if (!roomCode || !playerName) {
+        window.location.href = 'welcome.html';
+      } else {
+        // Set up room info display
+        document.getElementById('room-info').textContent = `Room: ${roomCode} | Player: ${playerName}`;
+        
+        // Update loading message based on action
+        const loadingText = isNewRoom ? 
+          "🏗️ Setting up your new room..." : 
+          "🚪 Joining room...";
+        document.querySelector("#loading-info p").textContent = loadingText;
+
+        // Start the game
+        import("./src/main.js").then((module) => {
+          module.startGame(roomCode, playerName);
+          
+          // Hide the loading message once game starts
+          setTimeout(() => {
+            document.getElementById("loading-info").style.display = "none";
+          }, 1000);
+        });
+      }
+    </script>
+  </body>
+</html>
