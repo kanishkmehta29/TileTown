@@ -3,6 +3,9 @@ const chatHistories = new Map();
 let currentChatTarget = null;
 let chatWS = null;
 
+// Import video call functionality
+import { showVideoCallButton, hideVideoCallButton, cleanupVideoCallSystem } from './videoCallHelper.js';
+
 export function initializeChatSystem(scene, ws) {
   chatWS = ws;
   setupChatUI(scene);
@@ -96,9 +99,18 @@ export function checkPlayerProximity(scene) {
     
     chatButton.style.display = 'block';
     chatButton.textContent = `💬 Chat with ${nearbyPlayer.name}`;
+    
+    // Also show video call button
+    const position = {
+      x: Math.max(10, Math.min(window.innerWidth - 350, screenX)), // Offset for both buttons
+      y: Math.max(10, Math.min(window.innerHeight - 50, screenY))
+    };
+    showVideoCallButton(nearbyPlayer, position);
+    
   } else if (!nearbyPlayer) {
     currentChatTarget = null;
     chatButton.style.display = 'none';
+    hideVideoCallButton();
   }
 }
 
@@ -313,4 +325,14 @@ function showChatNotification(fromName) {
     chatButton.textContent = originalText;
     chatButton.style.background = '#3498db';
   }, 3000);
+}
+
+export function cleanupChatSystem() {
+  currentChatTarget = null;
+  const chatButton = document.getElementById('chat-button');
+  if (chatButton) {
+    chatButton.style.display = 'none';
+  }
+  hideVideoCallButton();
+  cleanupVideoCallSystem();
 }

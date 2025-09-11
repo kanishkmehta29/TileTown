@@ -61,7 +61,7 @@ func JoinRoomHandler(manager *services.RoomManager) http.HandlerFunc {
 		//read loop
 		go func() {
 			defer func() {
-				// Send leave message to other players when connection closes
+				// send leave message to other players when connection closes
 				leaveMsg := &models.Message{
 					Type: "leave",
 					Id:   player.Id,
@@ -95,22 +95,35 @@ func JoinRoomHandler(manager *services.RoomManager) http.HandlerFunc {
 					msgStruct.Name = player.Name
 					room.Broadcast <- &msgStruct
 				} else if msgStruct.Type == "chat" {
-					// Handle chat messages
 					msgStruct.FromId = player.Id
 					msgStruct.FromName = player.Name
 
 					if msgStruct.ToId != "" {
-						// Private message - send only to target player
+						// private message - send only to target player
 						for p := range room.Players {
 							if p.Id == msgStruct.ToId {
 								p.MessageQueue <- &msgStruct
 								break
 							}
 						}
-						// Don't send back to sender - frontend handles it locally
 					} else {
-						// Broadcast message (for future use)
 						room.Broadcast <- &msgStruct
+					}
+				} else if msgStruct.Type == "video-call-offer" || msgStruct.Type == "video-call-answer" ||
+					msgStruct.Type == "video-call-ice-candidate" || msgStruct.Type == "video-call-end" ||
+					msgStruct.Type == "video-call-declined" {
+					// Handle video call signaling
+					msgStruct.FromId = player.Id
+					msgStruct.FromName = player.Name
+
+					if msgStruct.ToId != "" {
+						// Send signaling message to target player
+						for p := range room.Players {
+							if p.Id == msgStruct.ToId {
+								p.MessageQueue <- &msgStruct
+								break
+							}
+						}
 					}
 				} else {
 					room.Broadcast <- &msgStruct

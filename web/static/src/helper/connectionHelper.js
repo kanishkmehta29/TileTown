@@ -1,5 +1,6 @@
 import { addPlayer, setupPlayerControls } from "./playerHelper.js";
-import { initializeChatSystem, handleChatMessage } from "./chatHelper.js";
+import { initializeChatSystem, handleChatMessage, cleanupChatSystem } from "./chatHelper.js";
+import { initializeVideoCallSystem, handleVideoCallSignaling } from "./videoCallHelper.js";
 
 let ws = null;
 let isLeaving = false; // Flag to prevent recursive leave calls
@@ -21,6 +22,7 @@ export function setupWebSocket(scene) {
     console.log("Connected to TileTown server");
     setupPlayerControls(scene);
     initializeChatSystem(scene, ws);
+    initializeVideoCallSystem(scene, ws);
     if (scene.connectionStatusElement) {
       scene.connectionStatusElement.textContent = "🟢 Connected";
       scene.connectionStatusElement.style.color = "#00ff88";
@@ -68,6 +70,14 @@ function handleServerMessage(scene, message) {
 
     case 'chat':
       handleChatMessage(scene, message);
+      break;
+
+    case 'video-call-offer':
+    case 'video-call-answer':
+    case 'video-call-ice-candidate':
+    case 'video-call-end':
+    case 'video-call-declined':
+      handleVideoCallSignaling(message);
       break;
   }
 
@@ -196,6 +206,7 @@ function removePlayer(scene, playerId) {
 // Setup cleanup handlers for when user leaves the page
 function setupCleanupHandlers(scene) {
   window.addEventListener('beforeunload', () => {
+    cleanupChatSystem();
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.close();
       console.log('WebSocket connection closed');

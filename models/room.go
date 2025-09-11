@@ -31,4 +31,9 @@ type Message struct {
 	ToId      string `json:"toId,omitempty"`     // For private chat messages
 	FromId    string `json:"fromId,omitempty"`   // Sender ID
 	FromName  string `json:"fromName,omitempty"` // Sender name
+
+	// WebRTC signaling fields
+	Offer     interface{} `json:"offer,omitempty"`     // WebRTC offer
+	Answer    interface{} `json:"answer,omitempty"`    // WebRTC answer
+	Candidate interface{} `json:"candidate,omitempty"` // ICE candidate
 }

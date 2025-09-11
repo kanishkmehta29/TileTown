@@ -25,6 +25,31 @@
         💬 Chat
       </div>
 
+      <!-- Video Call Button -->
+      <div id="video-call-button" class="video-call-button" style="display: none;">
+        📹 Video Call
+      </div>
+
+      <!-- Video Call Modal -->
+      <div id="video-call-modal" class="video-call-modal" style="display: none;">
+        <div class="video-call-content">
+          <div class="video-call-header">
+            <span id="video-call-title">Video Call</span>
+            <button id="video-call-close" class="video-call-close">×</button>
+          </div>
+          <div class="video-container">
+            <video id="remote-video" class="remote-video" autoplay></video>
+            <video id="local-video" class="local-video" autoplay muted></video>
+          </div>
+          <div class="video-call-controls">
+            <button id="mute-audio" class="control-btn">🎤</button>
+            <button id="mute-video" class="control-btn">📹</button>
+            <button id="end-call" class="control-btn end-call">📞</button>
+          </div>
+          <div id="call-status" class="call-status">Connecting...</div>
+        </div>
+      </div>
+
       <!-- New chat container positioned on right side -->
       <div id="chat-modal" class="chat-container" style="display: none;">
         <div class="chat-header">
