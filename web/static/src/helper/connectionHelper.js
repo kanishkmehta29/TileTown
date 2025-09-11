@@ -1,4 +1,5 @@
 import { addPlayer, setupPlayerControls } from "./playerHelper.js";
+import { initializeChatSystem, handleChatMessage } from "./chatHelper.js";
 
 let ws = null;
 let isLeaving = false; // Flag to prevent recursive leave calls
@@ -6,6 +7,9 @@ let isLeaving = false; // Flag to prevent recursive leave calls
 export function setupWebSocket(scene) {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = window.location.host;
+
+  // Store scene reference globally for chat system
+  window.currentGameScene = scene;
 
   ws = new WebSocket(
     `${protocol}//${host}/rooms/${scene.roomCode}/join/${scene.playerName}`
@@ -16,6 +20,7 @@ export function setupWebSocket(scene) {
   ws.onopen = () => {
     console.log("Connected to TileTown server");
     setupPlayerControls(scene);
+    initializeChatSystem(scene, ws);
     if (scene.connectionStatusElement) {
       scene.connectionStatusElement.textContent = "🟢 Connected";
       scene.connectionStatusElement.style.color = "#00ff88";
@@ -59,6 +64,10 @@ function handleServerMessage(scene, message) {
 
     case 'leave':
       removePlayer(scene, message.id);
+      break;
+
+    case 'chat':
+      handleChatMessage(scene, message);
       break;
   }
 

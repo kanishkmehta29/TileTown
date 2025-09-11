@@ -1,6 +1,7 @@
 import { sendMovementDataToWS, setupDisplay, setupWebSocket } from "../helper/connectionHelper.js";
 import { preloadAssets, setupUI } from "../helper/mapHelper.js";
 import { handlePlayerMovement } from "../helper/playerHelper.js";
+import { checkPlayerProximity } from "../helper/chatHelper.js";
 
 
 export class Start extends Phaser.Scene {
@@ -23,8 +24,9 @@ export class Start extends Phaser.Scene {
   }
 
   update() {
-    handlePlayerMovement(this)
-    sendMovementDataToWS(this)
+    handlePlayerMovement(this);
+    sendMovementDataToWS(this);
+    checkPlayerProximity(this);
   }
 
   }

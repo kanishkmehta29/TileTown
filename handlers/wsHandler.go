@@ -93,8 +93,28 @@ func JoinRoomHandler(manager *services.RoomManager) http.HandlerFunc {
 					player.Direction = msgStruct.Direction
 					msgStruct.Id = player.Id
 					msgStruct.Name = player.Name
+					room.Broadcast <- &msgStruct
+				} else if msgStruct.Type == "chat" {
+					// Handle chat messages
+					msgStruct.FromId = player.Id
+					msgStruct.FromName = player.Name
+
+					if msgStruct.ToId != "" {
+						// Private message - send only to target player
+						for p := range room.Players {
+							if p.Id == msgStruct.ToId {
+								p.MessageQueue <- &msgStruct
+								break
+							}
+						}
+						// Don't send back to sender - frontend handles it locally
+					} else {
+						// Broadcast message (for future use)
+						room.Broadcast <- &msgStruct
+					}
+				} else {
+					room.Broadcast <- &msgStruct
 				}
-				room.Broadcast <- &msgStruct
 			}
 		}()
 

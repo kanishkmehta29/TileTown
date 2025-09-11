@@ -28,4 +28,7 @@ type Message struct {
 	Direction string `json:"direction,omitempty"`
 	Text      string `json:"text,omitempty"`
 	Name      string `json:"name,omitempty"`
+	ToId      string `json:"toId,omitempty"`     // For private chat messages
+	FromId    string `json:"fromId,omitempty"`   // Sender ID
+	FromName  string `json:"fromName,omitempty"` // Sender name
 }
