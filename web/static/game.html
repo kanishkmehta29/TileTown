@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TileTown - Game</title>
-    <link rel="stylesheet" href="game-styles.css" />
+    <link rel="stylesheet" href="css/game-styles.css" />
   </head>
   <body>
     <div id="game-container">
@@ -17,56 +17,84 @@
 
       <div id="loading-info">
         <p>🎮 Loading TileTown...</p>
-        <p style="font-size: 14px; opacity: 0.8; margin-top: 10px;">Please wait while we set up your game</p>
+        <p style="font-size: 14px; opacity: 0.8; margin-top: 10px">
+          Please wait while we set up your game
+        </p>
       </div>
 
       <!-- Chat System -->
-      <div id="chat-button" class="chat-button" style="display: none;">
+      <div id="chat-button" class="chat-button" style="display: none">
         💬 Chat
       </div>
 
       <!-- Video Call Button -->
-      <div id="video-call-button" class="video-call-button" style="display: none;">
+      <div
+        id="video-call-button"
+        class="video-call-button"
+        style="display: none"
+      >
         📹 Video Call
       </div>
 
-      <!-- Video Call Modal -->
-      <div id="video-call-modal" class="video-call-modal" style="display: none;">
-        <div class="video-call-content">
-          <div class="video-call-header">
-            <span id="video-call-title">Video Call</span>
-            <button id="video-call-close" class="video-call-close">×</button>
-          </div>
-          <div class="video-container">
-            <video id="remote-video" class="remote-video" autoplay></video>
-            <video id="local-video" class="local-video" autoplay muted></video>
-          </div>
-          <div class="video-call-controls">
-            <button id="mute-audio" class="control-btn">🎤</button>
-            <button id="mute-video" class="control-btn">📹</button>
-            <button id="end-call" class="control-btn end-call">📞</button>
-          </div>
-          <div id="call-status" class="call-status">Connecting...</div>
-        </div>
-      </div>
-
       <!-- New chat container positioned on right side -->
-      <div id="chat-modal" class="chat-container" style="display: none;">
+      <div id="chat-modal" class="chat-container" style="display: none">
         <div class="chat-header">
           <div class="chat-title" id="chat-with">Chat with Player</div>
           <button class="chat-close" id="chat-close">×</button>
         </div>
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-container">
-          <input type="text" class="chat-input" id="chat-input" placeholder="Type your message..." maxlength="200">
+          <input
+            type="text"
+            class="chat-input"
+            id="chat-input"
+            placeholder="Type your message..."
+            maxlength="200"
+          />
           <button class="chat-send" id="chat-send">Send</button>
+        </div>
+      </div>
+
+      <!-- Video Call Modal -->
+      <div id="video-call-modal" class="video-call-modal" style="display: none">
+        <div class="video-call-content">
+          <div class="video-call-header">
+            <h3 id="video-call-title">Video Call</h3>
+            <button id="video-call-close" class="video-call-close">×</button>
+          </div>
+
+          <div class="video-container">
+            <video
+              id="remote-video"
+              class="remote-video"
+              autoplay
+              playsinline
+            ></video>
+            <video
+              id="local-video"
+              class="local-video"
+              autoplay
+              playsinline
+              muted
+            ></video>
+          </div>
+
+          <div class="video-call-controls">
+            <div id="call-status" class="call-status">Initializing...</div>
+            <div class="control-buttons">
+              <button id="mute-audio" class="control-btn">🎤</button>
+              <button id="mute-video" class="control-btn">📹</button>
+              <button id="end-call" class="control-btn end-call">📞</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <script src="./phaser.js"></script>
-    <script type="module" src="./src/main.js"></script>
-    <script>
+    <script src="phaser.js"></script>
+    <script type="module">
+      import { startGame } from './src/main.js';
+
       // Get room and player info from URL parameters
       const urlParams = new URLSearchParams(window.location.search);
       const roomCode = urlParams.get('room');
@@ -79,23 +107,21 @@
       } else {
         // Set up room info display
         document.getElementById('room-info').textContent = `Room: ${roomCode} | Player: ${playerName}`;
-        
+
         // Update loading message based on action
-        const loadingText = isNewRoom ? 
-          "🏗️ Setting up your new room..." : 
+        const loadingText = isNewRoom ?
+          "🏗️ Setting up your new room..." :
           "🚪 Joining room...";
         document.querySelector("#loading-info p").textContent = loadingText;
 
         // Start the game
-        import("./src/main.js").then((module) => {
-          module.startGame(roomCode, playerName);
-          
+          startGame(roomCode, playerName);
+
           // Hide the loading message once game starts
           setTimeout(() => {
             document.getElementById("loading-info").style.display = "none";
           }, 1000);
-        });
-      }
+        }
     </script>
   </body>
 </html>

@@ -56,7 +56,7 @@ function handleServerMessage(scene, message) {
 
   switch (message.type) {
     case 'welcome':
-      addPlayer(scene, message.id, message.name, message.x, message.y);
+      addPlayer(scene, message.fromId, message.fromName, message.x, message.y);
       updatePlayerPosition(scene, message);
       break;
 
@@ -65,7 +65,7 @@ function handleServerMessage(scene, message) {
       break;
 
     case 'leave':
-      removePlayer(scene, message.id);
+      removePlayer(scene, message.fromId);
       break;
 
     case 'chat':
@@ -122,11 +122,11 @@ export function sendMovementDataToWS(scene) {
 
       ws.send(JSON.stringify({
         type: 'move',
-        id: scene.player.id,
+        fromId: scene.player.id,
         x: currentX,
         y: currentY,
         direction: direction,
-        name: scene.player.name,
+        fromName: scene.player.name,
       }));
 
       scene.lastSentPosition.x = currentX;
@@ -136,11 +136,11 @@ export function sendMovementDataToWS(scene) {
 }
 
 function updatePlayerPosition(scene, message) {
-  let player = scene.players.get(message.id);
+  let player = scene.players.get(message.fromId);
 
   if (!player) {
-    addPlayer(scene, message.id, message.name || 'Player', message.x, message.y);
-    player = scene.players.get(message.id);
+    addPlayer(scene, message.fromId, message.fromName || 'Player', message.x, message.y);
+    player = scene.players.get(message.fromId);
   }
 
   if (!player) return;

@@ -5,5 +5,5 @@ import (
 )
 
 func StaticFileHandler() http.Handler {
-	return http.FileServer(http.Dir("./web/static/"))
+	return http.FileServer(http.Dir("./web/static"))
 }

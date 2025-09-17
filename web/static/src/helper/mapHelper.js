@@ -161,21 +161,21 @@ function createPlants(scene, createScaledSprite) {
 }
 
 export function preloadAssets(scene) {
-  scene.load.image("background", "assets/background.jpg");
-  scene.load.image("door", "assets/door.png");
-  scene.load.image("table", "assets/table.png");
-  scene.load.image("chair", "assets/chair.png");
-  scene.load.image("work_table", "assets/work_table.png");
-  scene.load.image("work_chair", "assets/work_chair.png");
-  scene.load.image("black_sofa", "assets/black_sofa.png");
-  scene.load.image("white_sofa", "assets/white_sofa.png");
-  scene.load.image("round_table", "assets/round_table.png");
-  scene.load.image("plant1", "assets/plant1.png");
-  scene.load.image("plant2", "assets/plant2.png");
-  scene.load.image("vertical_wall", "assets/walls/vertical_wall.png");
-  scene.load.image("horizontal_wall", "assets/walls/horizontal_wall.png");
+  scene.load.image("background", "../assets/background.jpg");
+  scene.load.image("door", "../assets/door.png");
+  scene.load.image("table", "../assets/table.png");
+  scene.load.image("chair", "../assets/chair.png");
+  scene.load.image("work_table", "../assets/work_table.png");
+  scene.load.image("work_chair", "../assets/work_chair.png");
+  scene.load.image("black_sofa", "../assets/black_sofa.png");
+  scene.load.image("white_sofa", "../assets/white_sofa.png");
+  scene.load.image("round_table", "../assets/round_table.png");
+  scene.load.image("plant1", "../assets/plant1.png");
+  scene.load.image("plant2", "../assets/plant2.png");
+  scene.load.image("vertical_wall", "../assets/walls/vertical_wall.png");
+  scene.load.image("horizontal_wall", "../assets/walls/horizontal_wall.png");
 
-  scene.load.spritesheet("dude", "assets/dude.png", {
+  scene.load.spritesheet("dude", "../assets/dude.png", {
     frameWidth: 32,
     frameHeight: 48,
   });

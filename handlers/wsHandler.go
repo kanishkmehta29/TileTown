@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/kanishkmehta29/TileTown/constants"
 	"github.com/kanishkmehta29/TileTown/models"
 	"github.com/kanishkmehta29/TileTown/services"
 	"github.com/kanishkmehta29/TileTown/utils"
@@ -21,9 +22,10 @@ var upgrader = websocket.Upgrader{
 
 func JoinRoomHandler(manager *services.RoomManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		code := mux.Vars(r)["code"]
+		roomCode := mux.Vars(r)["code"]
+		playerName := mux.Vars(r)["name"]
 
-		room, ok := manager.GetRoom(code)
+		room, ok := manager.GetRoom(roomCode)
 		if !ok {
 			http.Error(w, "Room not found", http.StatusNotFound)
 			return
@@ -36,25 +38,25 @@ func JoinRoomHandler(manager *services.RoomManager) http.HandlerFunc {
 		}
 
 		player := &models.Player{
-			Name:         mux.Vars(r)["name"],
+			Name:         playerName,
 			Id:           utils.RandomCode(),
-			X:            150,
-			Y:            500,
-			Direction:    "down",
+			X:            constants.DefaultPlayerX,
+			Y:            constants.DefaultPlayerY,
+			Direction:    constants.PlayerDirectionDown,
 			Conn:         conn,
 			MessageQueue: make(chan *models.Message, 256),
 		}
 
 		room.Join <- player
-		log.Printf("player:%v joined the room:%v, player id:%v", player.Name, code, player.Id)
+		log.Printf("player:%v joined the room:%v, player id:%v", player.Name, roomCode, player.Id)
 
 		welcomeMsg := &models.Message{
-			Type:      "welcome",
-			Id:        player.Id,
+			Type:      constants.MessageTypeWelcome,
+			FromId:    player.Id,
 			X:         player.X,
 			Y:         player.Y,
 			Direction: player.Direction,
-			Name:      player.Name,
+			FromName:  player.Name,
 		}
 		player.MessageQueue <- welcomeMsg
 
@@ -63,43 +65,48 @@ func JoinRoomHandler(manager *services.RoomManager) http.HandlerFunc {
 			defer func() {
 				// send leave message to other players when connection closes
 				leaveMsg := &models.Message{
-					Type: "leave",
-					Id:   player.Id,
-					Text: player.Name,
+					Type:   constants.MessageTypeLeave,
+					FromId: player.Id,
+					Text:   player.Name,
 				}
 				room.Broadcast <- leaveMsg
 				room.Leave <- player
 				player.Conn.Close()
 
-				log.Printf("player:%v left the room:%v due to connection close, player id:%v", player.Name, code, player.Id)
+				log.Printf("player:%v left the room:%v due to connection close, player id:%v", player.Name, roomCode, player.Id)
 			}()
 			for {
 				_, msg, err := conn.ReadMessage()
 				if err != nil {
+					log.Printf("Error while reading ws message of player: %v", player.Id)
 					break
 				}
 				var msgStruct models.Message
 				err = json.Unmarshal(msg, &msgStruct)
 				if err != nil {
-					log.Printf("Error while unmarshalling message, error:%v", err.Error())
+					log.Printf("Error while unmarshalling message for player:%v, error:%v", player.Id, err.Error())
 					break
 				}
 
-				log.Printf("message received by player_name:%v, player_code:%v, message:%v", player.Name, player.Id, msgStruct)
+				log.Printf("ws message received by player_name:%v, player_code:%v, message:%v", player.Name, player.Id, msgStruct)
 
-				if msgStruct.Type == "move" {
+				switch msgStruct.Type {
+				//  movement
+				case constants.MessageTypeMove:
 					player.X = msgStruct.X
 					player.Y = msgStruct.Y
 					player.Direction = msgStruct.Direction
-					msgStruct.Id = player.Id
-					msgStruct.Name = player.Name
+					msgStruct.FromId = player.Id
+					msgStruct.FromName = player.Name
 					room.Broadcast <- &msgStruct
-				} else if msgStruct.Type == "chat" {
+
+				// chat
+				case constants.MessageTypeChat:
 					msgStruct.FromId = player.Id
 					msgStruct.FromName = player.Name
 
+					// send message to the appropriate player only
 					if msgStruct.ToId != "" {
-						// private message - send only to target player
 						for p := range room.Players {
 							if p.Id == msgStruct.ToId {
 								p.MessageQueue <- &msgStruct
@@ -109,15 +116,14 @@ func JoinRoomHandler(manager *services.RoomManager) http.HandlerFunc {
 					} else {
 						room.Broadcast <- &msgStruct
 					}
-				} else if msgStruct.Type == "video-call-offer" || msgStruct.Type == "video-call-answer" ||
-					msgStruct.Type == "video-call-ice-candidate" || msgStruct.Type == "video-call-end" ||
-					msgStruct.Type == "video-call-declined" {
-					// Handle video call signaling
+
+				// video-call
+				case "video-call-offer", "video-call-answer", "video-call-ice-candidate", "video-call-end", "video-call-declined":
 					msgStruct.FromId = player.Id
 					msgStruct.FromName = player.Name
 
+					// send message to the appropriate player only
 					if msgStruct.ToId != "" {
-						// Send signaling message to target player
 						for p := range room.Players {
 							if p.Id == msgStruct.ToId {
 								p.MessageQueue <- &msgStruct
@@ -125,8 +131,6 @@ func JoinRoomHandler(manager *services.RoomManager) http.HandlerFunc {
 							}
 						}
 					}
-				} else {
-					room.Broadcast <- &msgStruct
 				}
 			}
 		}()
@@ -146,16 +150,16 @@ func JoinRoomHandler(manager *services.RoomManager) http.HandlerFunc {
 
 func LeaveRoomHandler(manager *services.RoomManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		code := mux.Vars(r)["code"]
+		roomCode := mux.Vars(r)["code"]
 		playerName := mux.Vars(r)["name"]
 
-		room, ok := manager.GetRoom(code)
+		room, ok := manager.GetRoom(roomCode)
 		if !ok {
 			http.Error(w, "Room not found", http.StatusNotFound)
 			return
 		}
 
-		// Find the player in the room
+		// find the player in the room
 		var playerToRemove *models.Player
 		for player := range room.Players {
 			if player.Name == playerName {
@@ -169,23 +173,23 @@ func LeaveRoomHandler(manager *services.RoomManager) http.HandlerFunc {
 			return
 		}
 
-		// Send leave message to room
+		// send leave message to room
 		leaveMsg := &models.Message{
-			Type: "leave",
-			Id:   playerToRemove.Id,
-			Text: playerToRemove.Name,
+			Type:   constants.MessageTypeLeave,
+			FromId: playerToRemove.Id,
+			Text:   playerToRemove.Name,
 		}
 		room.Broadcast <- leaveMsg
 
-		// Remove player from room
+		// remove player from room
 		room.Leave <- playerToRemove
 
-		// Close player's connection
+		// close player's connection
 		playerToRemove.Conn.Close()
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "left", "player": playerName})
 
-		log.Printf("player:%v left the room:%v, player id:%v", playerToRemove.Name, code, playerToRemove.Id)
+		log.Printf("player:%v left the room:%v, player id:%v", playerToRemove.Name, roomCode, playerToRemove.Id)
 	}
 }

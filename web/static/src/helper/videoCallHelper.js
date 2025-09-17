@@ -7,14 +7,18 @@ let currentCallTarget = null;
 let videoCallWS = null;
 let isAudioMuted = false;
 let isVideoMuted = false;
+let pendingIceCandidates = []; // Queue for ICE candidates that arrive before remote description
 
 // WebRTC configuration with STUN servers for NAT traversal
 const pcConfig = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' }
-  ]
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' }
+  ],
+  iceCandidatePoolSize: 10
 };
 
 export function initializeVideoCallSystem(scene, ws) {
@@ -80,18 +84,40 @@ async function startVideoCall(targetPlayer) {
   try {
     updateCallStatus('Requesting camera and microphone access...');
     
-    // Get user media
+    // Reset ICE candidates queue
+    pendingIceCandidates = [];
+    
+    // Get user media with specific constraints
     localStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: 640, height: 480 },
-      audio: true
+      video: { 
+        width: { ideal: 640 }, 
+        height: { ideal: 480 },
+        facingMode: 'user'
+      },
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
     });
 
+    console.log('Local stream obtained:', localStream);
+
     // Show the video call modal
+    console.log('Showing video call modal...');
     showVideoCallModal(targetPlayer);
     
     // Display local video
     const localVideo = document.getElementById('local-video');
-    localVideo.srcObject = localStream;
+    console.log('Local video element:', localVideo);
+    if (localVideo) {
+      localVideo.srcObject = localStream;
+      localVideo.muted = true; // Always mute local video to prevent feedback
+      localVideo.play().catch(e => console.log('Local video play error:', e));
+      console.log('Local video stream set and play initiated');
+    } else {
+      console.error('Local video element not found!');
+    }
 
     // Create peer connection
     createPeerConnection();
@@ -104,7 +130,13 @@ async function startVideoCall(targetPlayer) {
     updateCallStatus('Calling...');
 
     // Create and send offer
-    const offer = await peerConnection.createOffer();
+    console.log('Creating offer...');
+    const offer = await peerConnection.createOffer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: true
+    });
+    
+    console.log('Created offer:', offer);
     await peerConnection.setLocalDescription(offer);
 
     // Send offer through WebSocket
@@ -118,10 +150,16 @@ async function startVideoCall(targetPlayer) {
 
   } catch (error) {
     console.error('Error starting video call:', error);
-    updateCallStatus('Failed to access camera/microphone');
+    if (error.name === 'NotAllowedError') {
+      updateCallStatus('Camera/microphone access denied');
+    } else if (error.name === 'NotFoundError') {
+      updateCallStatus('No camera/microphone found');
+    } else {
+      updateCallStatus('Failed to access camera/microphone');
+    }
     setTimeout(() => {
       endVideoCall();
-    }, 2000);
+    }, 3000);
   }
 }
 
@@ -152,18 +190,30 @@ function createPeerConnection() {
   peerConnection.onconnectionstatechange = () => {
     console.log('Connection state:', peerConnection.connectionState);
     switch (peerConnection.connectionState) {
+      case 'connecting':
+        updateCallStatus('Establishing connection...');
+        break;
       case 'connected':
         updateCallStatus('Connected');
         break;
       case 'disconnected':
+        updateCallStatus('Connection lost - reconnecting...');
+        break;
       case 'failed':
+        console.error('WebRTC connection failed');
         updateCallStatus('Connection failed');
-        setTimeout(endVideoCall, 2000);
+        setTimeout(endVideoCall, 3000);
         break;
       case 'closed':
         updateCallStatus('Call ended');
         break;
     }
+  };
+
+  // Handle data channel errors
+  peerConnection.onerror = (error) => {
+    console.error('WebRTC error:', error);
+    updateCallStatus('Connection error');
   };
 }
 
@@ -171,8 +221,19 @@ function showVideoCallModal(targetPlayer) {
   const modal = document.getElementById('video-call-modal');
   const title = document.getElementById('video-call-title');
   
-  title.textContent = `Video Call with ${targetPlayer.name}`;
-  modal.style.display = 'flex';
+  console.log('Modal element:', modal);
+  console.log('Title element:', title);
+  
+  if (title) {
+    title.textContent = `Video Call with ${targetPlayer.name}`;
+  }
+  
+  if (modal) {
+    modal.style.display = 'flex';
+    console.log('Video call modal displayed');
+  } else {
+    console.error('Video call modal not found!');
+  }
   
   // Hide proximity buttons
   hideProximityButtons();
@@ -232,10 +293,18 @@ async function handleIncomingOffer(message) {
   }
 
   try {
-    // Get user media
+    // Get user media with same constraints as caller
     localStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: 640, height: 480 },
-      audio: true
+      video: { 
+        width: { ideal: 640 }, 
+        height: { ideal: 480 },
+        facingMode: 'user'
+      },
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
     });
 
     // Find the caller in players list
@@ -248,7 +317,11 @@ async function handleIncomingOffer(message) {
 
     // Display local video
     const localVideo = document.getElementById('local-video');
-    localVideo.srcObject = localStream;
+    if (localVideo) {
+      localVideo.srcObject = localStream;
+      localVideo.muted = true; // Always mute local video to prevent feedback
+      localVideo.play().catch(e => console.log('Local video play error:', e));
+    }
 
     // Create peer connection
     createPeerConnection();
@@ -259,8 +332,27 @@ async function handleIncomingOffer(message) {
     });
 
     // Set remote description and create answer
-    await peerConnection.setRemoteDescription(message.offer);
-    const answer = await peerConnection.createAnswer();
+    console.log('Setting remote description from offer:', message.offer);
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
+    
+    // Process any pending ICE candidates
+    console.log('Processing', pendingIceCandidates.length, 'pending ICE candidates after setting remote description');
+    for (const candidate of pendingIceCandidates) {
+      try {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log('Added pending ICE candidate:', candidate);
+      } catch (error) {
+        console.error('Error adding pending ICE candidate:', error);
+      }
+    }
+    pendingIceCandidates = []; // Clear the queue
+    
+    const answer = await peerConnection.createAnswer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: true
+    });
+    
+    console.log('Created answer:', answer);
     await peerConnection.setLocalDescription(answer);
 
     // Send answer
@@ -280,15 +372,44 @@ async function handleIncomingOffer(message) {
 }
 
 async function handleIncomingAnswer(message) {
-  if (peerConnection && peerConnection.signalingState === 'have-local-offer') {
-    await peerConnection.setRemoteDescription(message.answer);
-    updateCallStatus('Connecting...');
+  try {
+    if (peerConnection && peerConnection.signalingState === 'have-local-offer') {
+      console.log('Setting remote description from answer:', message.answer);
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
+      
+      // Process any pending ICE candidates
+      console.log('Processing', pendingIceCandidates.length, 'pending ICE candidates');
+      for (const candidate of pendingIceCandidates) {
+        try {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          console.log('Added pending ICE candidate:', candidate);
+        } catch (error) {
+          console.error('Error adding pending ICE candidate:', error);
+        }
+      }
+      pendingIceCandidates = []; // Clear the queue
+      
+      updateCallStatus('Connecting...');
+    } else {
+      console.warn('Cannot set remote description, signaling state:', peerConnection?.signalingState);
+    }
+  } catch (error) {
+    console.error('Error handling answer:', error);
+    updateCallStatus('Connection error');
   }
 }
 
 async function handleIncomingIceCandidate(message) {
-  if (peerConnection && peerConnection.remoteDescription) {
-    await peerConnection.addIceCandidate(message.candidate);
+  try {
+    if (peerConnection && peerConnection.remoteDescription) {
+      console.log('Adding ICE candidate:', message.candidate);
+      await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+    } else {
+      console.log('Queuing ICE candidate, no remote description set yet');
+      pendingIceCandidates.push(message.candidate);
+    }
+  } catch (error) {
+    console.error('Error handling ICE candidate:', error);
   }
 }
 
@@ -366,6 +487,7 @@ function cleanupCall() {
   currentCallTarget = null;
   isAudioMuted = false;
   isVideoMuted = false;
+  pendingIceCandidates = []; // Clear ICE candidates queue
 
   // Clear video elements
   const localVideo = document.getElementById('local-video');

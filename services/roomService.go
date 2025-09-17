@@ -2,7 +2,6 @@ package services
 
 import (
 	"log"
-	"sync"
 
 	"github.com/kanishkmehta29/TileTown/models"
 	"github.com/kanishkmehta29/TileTown/utils"
@@ -10,7 +9,6 @@ import (
 
 type RoomManager struct {
 	rooms map[string]*models.Room
-	mu    sync.RWMutex
 }
 
 func NewRoomManager() *RoomManager {
@@ -28,18 +26,14 @@ func (m *RoomManager) CreateRoom() *models.Room {
 		Join:      make(chan *models.Player),
 		Leave:     make(chan *models.Player),
 	}
-	m.mu.Lock()
 	m.rooms[newRoomCode] = newRoom
 	log.Printf("room created with code:%v", newRoomCode)
-	m.mu.Unlock()
 
 	go runRoom(newRoom)
 	return newRoom
 }
 
 func (m *RoomManager) GetRoom(code string) (*models.Room, bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 	room, ok := m.rooms[code]
 	return room, ok
 }
@@ -57,12 +51,13 @@ func runRoom(r *models.Room) {
 			}
 		case msg := <-r.Broadcast:
 			for p := range r.Players {
-				if p.Id == msg.Id {
+				if p.Id == msg.FromId {
 					continue
 				}
 				select {
 				case p.MessageQueue <- msg:
 				default:
+					log.Printf("Removing the player %v as its message queue filled",p.Name)
 					close(p.MessageQueue)
 					delete(r.Players, p)
 				}
