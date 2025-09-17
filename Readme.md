@@ -1,6 +1,6 @@
 # TileTown 🏘️
 
-A real-time multiplayer virtual office game built with Go backend and Phaser.js frontend. Players can create or join virtual office rooms, move around in a 2D office environment, and interact with other players in real-time.
+A real-time multiplayer virtual office game built with Go backend and Phaser.js frontend. Players can create or join virtual office rooms, move around in a 2D office environment, interact with other players in real-time, chat privately, and make video calls with nearby colleagues.
 
 ## 🎮 Features
 
@@ -10,6 +10,9 @@ A real-time multiplayer virtual office game built with Go backend and Phaser.js 
 - **Interactive Office Environment**: Navigate through meeting rooms, work areas, lounge spaces, and more
 - **Player Customization**: Each player has a unique appearance and name tag
 - **Collision Detection**: Realistic physics with furniture and wall boundaries
+- **Proximity-Based Chat**: Private messaging with players when you're nearby
+- **Video Calling**: WebRTC-powered video calls with camera/microphone controls
+- **Chat History**: Persistent chat conversations per player
 - **Responsive Design**: Works on desktop and mobile devices
 
 ## 🏗️ Architecture
@@ -18,12 +21,15 @@ A real-time multiplayer virtual office game built with Go backend and Phaser.js 
 - **HTTP Server**: Gorilla Mux router for REST endpoints and WebSocket upgrades
 - **WebSocket Management**: Real-time bidirectional communication
 - **Room Service**: Manages room creation, player joining/leaving, and message broadcasting
+- **Message Routing**: Handles movement, chat, and video call signaling messages
 - **Concurrent Design**: Each room runs in its own goroutine for scalability
 
 ### Frontend (JavaScript/Phaser.js)
 - **Phaser 3 Game Engine**: Handles 2D rendering, physics, and animations
 - **Modular Architecture**: Organized into helper modules for different concerns
 - **WebSocket Client**: Maintains connection with backend for real-time updates
+- **WebRTC Integration**: Peer-to-peer video calling with STUN servers
+- **Chat System**: Real-time messaging with history persistence
 - **Responsive UI**: Modern CSS with backdrop filters and smooth animations
 
 ## 📁 Project Structure
@@ -32,12 +38,14 @@ A real-time multiplayer virtual office game built with Go backend and Phaser.js 
 TileTown/
 ├── main.go                     # Application entry point
 ├── go.mod                      # Go module dependencies
+├── go.sum                      # Go module checksums
+├── Readme.md                   # Project documentation
 ├── constants/
-│   └── constants.go            # Application constants
+│   └── constants.go            # Application constants (message types, defaults)
 ├── handlers/
 │   ├── roomHandler.go          # Room creation endpoints
 │   ├── staticHandler.go        # Static file serving
-│   └── wsHandler.go            # WebSocket connection handling
+│   └── wsHandler.go            # WebSocket connection and message handling
 ├── models/
 │   └── room.go                 # Data structures (Player, Room, Message)
 ├── services/
@@ -45,29 +53,56 @@ TileTown/
 ├── utils/
 │   └── utils.go                # Utility functions (room code generation)
 └── web/
-    ├── index.html              # Legacy game interface
     └── static/
-        ├── welcome.html        # Landing page
+        ├── welcome.html        # Landing page with room creation/joining
         ├── game.html           # Main game interface
-        ├── styles.css          # Welcome page styles
-        ├── game-styles.css     # Game interface styles
-        ├── phaser.js           # Phaser.js library
-        ├── assets/             # Game sprites and images
+        ├── index.html          # Redirect to welcome page
+        ├── phaser.js           # Phaser.js game engine library
+        ├── css/
+        │   ├── styles.css      # Welcome page styles
+        │   └── game-styles.css # Game interface and chat/video call styles
+        ├── javascript/
+        │   └── welcome.js      # Welcome page functionality
+        ├── assets/
+        │   ├── background.jpg  # Office background
+        │   ├── characters/     # Player sprites and animations
+        │   │   ├── dude.png
+        │   │   ├── character_move.png
+        │   │   ├── characters.png
+        │   │   └── Walk.png
+        │   ├── furniture/      # Office furniture sprites
+        │   │   ├── chair.png
+        │   │   ├── table.png
+        │   │   ├── black_sofa.png
+        │   │   ├── white_sofa.png
+        │   │   ├── round_table.png
+        │   │   ├── work_chair.png
+        │   │   └── work_table.png
+        │   ├── environment/    # Environment elements
+        │   │   ├── door.png
+        │   │   ├── plant1.png
+        │   │   └── plant2.png
+        │   └── walls/          # Wall sprites for collision
+        │       ├── vertical_wall.png
+        │       └── horizontal_wall.png
         └── src/
-            ├── main.js         # Game initialization
+            ├── main.js         # Game initialization and configuration
             ├── scenes/
-            │   └── Start.js    # Main game scene
+            │   └── Start.js    # Main game scene with update loop
             └── helper/
-                ├── connectionHelper.js  # WebSocket management
-                ├── mapHelper.js        # Office layout and assets
-                └── playerHelper.js     # Player controls and animations
+                ├── connectionHelper.js  # WebSocket management and message handling
+                ├── mapHelper.js         # Office layout, assets, and physics setup
+                ├── playerHelper.js      # Player controls, animations, and collision
+                ├── chatHelper.js        # Chat system with history and proximity detection
+                └── videoCallHelper.js   # WebRTC video calling system
 ```
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Go 1.19 or higher
-- Modern web browser with WebSocket support
+- Modern web browser with WebSocket and WebRTC support
+- Camera and microphone (optional, for video calls)
 
 ### Installation
 
@@ -110,6 +145,20 @@ TileTown/
 - **Real-time Movement**: Your position updates live for other players
 - **Collision System**: Navigate around furniture and obstacles
 
+### Communication Features
+
+#### Proximity Chat
+- **Automatic Detection**: Chat buttons appear when you're near other players
+- **Private Messaging**: Click the chat button to start a private conversation
+- **Chat History**: Previous conversations are saved and restored
+- **Real-time Notifications**: Get notified of new messages
+
+#### Video Calling
+- **Proximity Activation**: Video call buttons appear when near other players
+- **WebRTC Technology**: Peer-to-peer video calls with low latency
+- **Media Controls**: Mute/unmute audio and video during calls
+- **Call Management**: Accept, decline, or end calls with intuitive controls
+
 ## 🏢 Office Layout
 
 The virtual office includes several areas:
@@ -118,3 +167,24 @@ The virtual office includes several areas:
 - **Work Area**: Individual desks and work chairs for focused work
 - **Lounge Area**: Comfortable sofas and round table for casual interactions
 - **Decorative Elements**: Plants, walls, and office equipment for ambiance
+- **Open Spaces**: Areas for free movement and spontaneous interactions
+
+## 🔧 API Endpoints
+
+### REST Endpoints
+- `POST /rooms` - Create a new room
+- `DELETE /rooms/{code}/leave/{name}` - Leave a room
+
+### WebSocket Endpoints
+- `GET /rooms/{code}/join/{name}` - Join room via WebSocket
+
+### Message Types
+- `welcome` - Initial player setup and position
+- `move` - Player movement updates with direction
+- `chat` - Private chat messages between players
+- `leave` - Player disconnection notification
+- `video-call-offer` - WebRTC offer for video call initiation
+- `video-call-answer` - WebRTC answer for call acceptance
+- `video-call-ice-candidate` - ICE candidates for connection establishment
+- `video-call-end` - Call termination signal
+- `video-call-declined` - Call rejection signal
