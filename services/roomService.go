@@ -2,6 +2,7 @@ package services
 
 import (
 	"log"
+	"sync"
 
 	"github.com/kanishkmehta29/TileTown/models"
 	"github.com/kanishkmehta29/TileTown/utils"
@@ -9,6 +10,7 @@ import (
 
 type RoomManager struct {
 	rooms map[string]*models.Room
+	mu    sync.RWMutex
 }
 
 func NewRoomManager() *RoomManager {
@@ -26,14 +28,18 @@ func (m *RoomManager) CreateRoom() *models.Room {
 		Join:      make(chan *models.Player),
 		Leave:     make(chan *models.Player),
 	}
+	m.mu.Lock()
 	m.rooms[newRoomCode] = newRoom
 	log.Printf("room created with code:%v", newRoomCode)
+	m.mu.Unlock()
 
 	go runRoom(newRoom)
 	return newRoom
 }
 
 func (m *RoomManager) GetRoom(code string) (*models.Room, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	room, ok := m.rooms[code]
 	return room, ok
 }
